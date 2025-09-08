@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>무한 타임라인 캔버스</title>
+    <style>
+      :root {
+        --bg: #0b0d10;
+        --panel: #11151a;
+        --line: #2a2f36;
+        --accent: #7aa2ff;
+        --accent2: #a3ffb5;
+        --note: #1a2027;
+        --note-text: #e6edf3;
+        --grid: #1b2027;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        color: #cdd6df;
+        font-family: ui-sans-serif, system-ui, AppleSDGothicNeo,
+          Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Segoe UI Symbol;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      /* 컨트롤 패널 */
+      .hud {
+        position: fixed;
+        left: 16px;
+        top: 16px;
+        z-index: 10;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.04),
+          rgba(255, 255, 255, 0.02)
+        );
+        backdrop-filter: blur(6px);
+        border: 1px solid #202734;
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      .hud .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .hud button,
+      .hud input,
+      .hud label {
+        font: inherit;
+        color: #d8e1ea;
+      }
+      .hud button {
+        background: #1d2430;
+        border: 1px solid #2b3342;
+        border-radius: 9px;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+      .hud button:hover {
+        border-color: #3d475b;
+      }
+      .hud input[type='date'] {
+        background: #0e131a;
+        border: 1px solid #2b3342;
+        border-radius: 9px;
+        padding: 8px 10px;
+      }
+      .badge {
+        padding: 4px 8px;
+        border: 1px solid #2b3342;
+        border-radius: 999px;
+        font-size: 12px;
+        opacity: 0.9;
+      }
+
+      /* SVG 전체영역 */
+      svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: linear-gradient(
+          180deg,
+          transparent 49.5%,
+          rgba(122, 162, 255, 0.06) 49.5%,
+          rgba(122, 162, 255, 0.06) 50.5%,
+          transparent 50.5%
+        ); /* 타임라인 중앙 가이드 */
+      }
+
+      /* 노트 스타일 (foreignObject 내부) */
+      .note {
+        width: 220px;
+        height: 160px;
+        box-sizing: border-box;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.03),
+          rgba(255, 255, 255, 0.02)
+        );
+        border: 1px solid #2a3240;
+        border-radius: 14px;
+        color: var(--note-text);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .note .handle {
+        height: 34px;
+        background: #10151d;
+        border-bottom: 1px solid #223046;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        cursor: grab;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .note .title {
+        font-weight: 600;
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      .note .body {
+        flex: 1;
+        padding: 10px;
+        outline: none;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      .note .footer {
+        height: 30px;
+        border-top: 1px solid #223046;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .note .footer button {
+        background: #121923;
+        border: 1px solid #283348;
+        color: #cfd7e3;
+        border-radius: 8px;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
+      /* 툴팁 */
+      .help {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 10;
+        background: #0f141b;
+        border: 1px solid #202734;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        opacity: 0.9;
+      }
+
+      /* 선택 금지 */
+      .noselect {
+        user-select: none;
+        -webkit-user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- 컨트롤 HUD -->
+      <div class="hud noselect">
+        <div class="row" style="margin-bottom: 8px">
+          <span class="badge">무한 타임라인</span>
+          <button id="btnToday">오늘로</button>
+          <label
+            >날짜로 점프:
+            <input type="date" id="jumpDate" />
+          </label>
+          <button id="btnJump">이동</button>
+        </div>
+        <div class="row">
+          <button id="btnExport">내보내기(JSON)</button>
+          <button id="btnImport">가져오기</button>
+          <input
+            type="file"
+            id="fileImport"
+            accept="application/json"
+            style="display: none"
+          />
+          <span style="opacity: 0.7"
+            >• 더블클릭: 노트 추가 • 드래그: 이동 • 스크롤: 줌</span
+          >
+        </div>
+      </div>
+
+      <!-- 도움말 -->
+      <div class="help">
+        <div>조작 안내</div>
+        <div>• 배경 더블클릭 → 노트 만들기</div>
+        <div>• 노트 상단 바 드래그 → 노트 이동</div>
+        <div>• 마우스 휠 → 줌, 드래그 → 캔버스 이동</div>
+        <div>• 내용은 자동 저장 (localStorage)</div>
+      </div>
+
+      <!-- 메인 SVG 월드 -->
+      <svg id="stage">
+        <defs>
+          <marker
+            id="arrow"
+            markerWidth="8"
+            markerHeight="8"
+            refX="6"
+            refY="4"
+            orient="auto"
+          >
+            <path d="M0,0 L8,4 L0,8 z" fill="rgba(163,255,181,0.9)" />
+          </marker>
+        </defs>
+        <!-- 화면 변환 그룹 -->
+        <g id="view">
+          <!-- 타임라인 레이어 -->
+          <g id="timeline"></g>
+          <!-- 노트 연결선 레이어 -->
+          <g id="links"></g>
+          <!-- 노트 레이어 (foreignObject) -->
+          <g id="notes"></g>
+        </g>
+      </svg>
+    </div>
+
+    <script>
+      (function () {
+        // ====== 좌표/날짜 맵핑 ======
+        const DAY_MS = 86400000;
+        const DAY_PX = 120; // 일자당 픽셀 간격
+        const EPOCH = new Date('2025-01-01T00:00:00Z'); // 기준일
+        function dateToDays(d) {
+          return Math.floor((d - EPOCH) / DAY_MS);
+        }
+        function daysToDate(n) {
+          return new Date(EPOCH.getTime() + n * DAY_MS);
+        }
+        function ymd(d) {
+          const z = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+        }
+
+        // ====== 뷰 변환(팬/줌) ======
+        const svg = document.getElementById('stage');
+        const view = document.getElementById('view');
+        let state = { scale: 1, tx: 0, ty: 0 };
+        const minScale = 0.25,
+          maxScale = 4;
+        function applyTransform() {
+          view.setAttribute(
+            'transform',
+            `translate(${state.tx},${state.ty}) scale(${state.scale})`
+          );
+          render();
+        }
+        function screenToWorld(sx, sy) {
+          const rect = svg.getBoundingClientRect();
+          sx -= rect.left;
+          sy -= rect.top;
+          return {
+            x: (sx - state.tx) / state.scale,
+            y: (sy - state.ty) / state.scale,
+          };
+        }
+        function worldToScreen(wx, wy) {
+          return {
+            x: wx * state.scale + state.tx,
+            y: wy * state.scale + state.ty,
+          };
+        }
+
+        // 초기 위치: 화면 중앙 y=0 (타임라인) 보이게
+        function centerToday() {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const d = dateToDays(today);
+          const rect = svg.getBoundingClientRect();
+          state.scale = 1;
+          state.tx = rect.width / 2 - d * DAY_PX * state.scale;
+          state.ty = rect.height / 2; // y=0을 화면 중앙으로
+          applyTransform();
+        }
+
+        // 줌
+        svg.addEventListener(
+          'wheel',
+          (e) => {
+            e.preventDefault();
+            const delta = -Math.sign(e.deltaY) * 0.1;
+            const newScale = Math.min(
+              maxScale,
+              Math.max(minScale, state.scale * (1 + delta))
+            );
+            const pt = { x: e.clientX, y: e.clientY };
+            const world = screenToWorld(pt.x, pt.y);
+            // 커서 고정 줌
+            state.tx = pt.x - world.x * newScale;
+            state.ty = pt.y - world.y * newScale;
+            state.scale = newScale;
+            applyTransform();
+          },
+          { passive: false }
+        );
+
+        // 팬(배경 드래그)
+        let dragging = false,
+          last = { x: 0, y: 0 };
+        svg.addEventListener('mousedown', (e) => {
+          // foreignObject 내부 클릭은 패닝 막기 (노트 드래그 전용)
+          if (e.target.closest('foreignObject')) return;
+          dragging = true;
+          last.x = e.clientX;
+          last.y = e.clientY;
+          svg.style.cursor = 'grabbing';
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!dragging) return;
+          state.tx += e.clientX - last.x;
+          state.ty += e.clientY - last.y;
+          last.x = e.clientX;
+          last.y = e.clientY;
+          applyTransform();
+        });
+        window.addEventListener('mouseup', () => {
+          dragging = false;
+          svg.style.cursor = 'default';
+        });
+
+        // ====== 데이터 저장 ======
+        const STORE_KEY = 'infiniteTimeline.notes.v1';
+        let notes = load() || [];
+        function save() {
+          localStorage.setItem(STORE_KEY, JSON.stringify(notes));
+        }
+        function load() {
+          try {
+            return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+          } catch (_) {
+            return [];
+          }
+        }
+
+        // ====== 타임라인/점 렌더링 ======
+        const gTimeline = document.getElementById('timeline');
+        const gLinks = document.getElementById('links');
+        const gNotes = document.getElementById('notes');
+
+        function clearNode(n) {
+          while (n.firstChild) n.removeChild(n.firstChild);
+        }
+
+        function renderTimeline() {
+          clearNode(gTimeline);
+          const rect = svg.getBoundingClientRect();
+          // 화면의 월드 좌우 범위
+          const leftW = (0 - state.tx) / state.scale;
+          const rightW = (rect.width - state.tx) / state.scale;
+
+          // 타임라인 한 줄 (y=0)
+          const line = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'line'
+          );
+          line.setAttribute('x1', leftW - 10000);
+          line.setAttribute('x2', rightW + 10000);
+          line.setAttribute('y1', 0);
+          line.setAttribute('y2', 0);
+          line.setAttribute('stroke', '#3a4150');
+          line.setAttribute('stroke-width', 2);
+          gTimeline.appendChild(line);
+
+          // 보이는 날짜 범위 계산
+          const dayStart = Math.floor(leftW / DAY_PX) - 2;
+          const dayEnd = Math.ceil(rightW / DAY_PX) + 2;
+
+          // 날짜 점들
+          for (let d = dayStart; d <= dayEnd; d++) {
+            const x = d * DAY_PX;
+            const isMonthStart = daysToDate(d).getDate() === 1;
+            const cx = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'circle'
+            );
+            cx.setAttribute('cx', x);
+            cx.setAttribute('cy', 0);
+            cx.setAttribute('r', isMonthStart ? 5 : 3);
+            cx.setAttribute(
+              'fill',
+              isMonthStart ? 'rgba(122,162,255,0.95)' : 'rgba(122,162,255,0.5)'
+            );
+            gTimeline.appendChild(cx);
+
+            // 월표시 레이블
+            if (isMonthStart && state.scale >= 0.5) {
+              const t = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'text'
+              );
+              const dt = daysToDate(d);
+              t.setAttribute('x', x + 8);
+              t.setAttribute('y', -10);
+              t.setAttribute('fill', '#cfd7e3');
+              t.setAttribute('font-size', 12);
+              t.textContent = `${dt.getFullYear()}-${String(
+                dt.getMonth() + 1
+              ).padStart(2, '0')}`;
+              gTimeline.appendChild(t);
+            }
+          }
+
+          // 오늘 강조
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const td = dateToDays(today),
+            tx = td * DAY_PX;
+          const tline = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'line'
+          );
+          tline.setAttribute('x1', tx);
+          tline.setAttribute('x2', tx);
+          tline.setAttribute('y1', -2000);
+          tline.setAttribute('y2', 2000);
+          tline.setAttribute('stroke', 'rgba(163,255,181,0.35)');
+          tline.setAttribute('stroke-dasharray', '6 6');
+          gTimeline.appendChild(tline);
+
+          const tdDot = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'circle'
+          );
+          tdDot.setAttribute('cx', tx);
+          tdDot.setAttribute('cy', 0);
+          tdDot.setAttribute('r', 7);
+          tdDot.setAttribute('fill', 'rgba(163,255,181,0.95)');
+          tdDot.setAttribute('stroke', '#0b0d10');
+          tdDot.setAttribute('stroke-width', 2);
+          gTimeline.appendChild(tdDot);
+        }
+
+        // ====== 노트 렌더링 & 연결선 ======
+        function renderLinks() {
+          clearNode(gLinks);
+          notes.forEach((n) => {
+            // 노트와 해당 날짜 점을 연결
+            const xDot = n.day * DAY_PX;
+            const xNote = n.x + n.w / 2;
+            const yNote = n.y + n.h;
+            const path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'path'
+            );
+            const midY = yNote / 2; // 곡선 제어점
+            const d = `M ${xNote} ${yNote} C ${xNote} ${midY}, ${xDot} ${midY}, ${xDot} 0`;
+            path.setAttribute('d', d);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', 'rgba(163,255,181,0.7)');
+            path.setAttribute('stroke-width', 1.5);
+            path.setAttribute('marker-end', 'url(#arrow)');
+            gLinks.appendChild(path);
+          });
+        }
+
+        function renderNotes() {
+          clearNode(gNotes);
+          notes.forEach((n, idx) => {
+            const fo = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'foreignObject'
+            );
+            fo.setAttribute('x', n.x);
+            fo.setAttribute('y', n.y);
+            fo.setAttribute('width', n.w);
+            fo.setAttribute('height', n.h);
+            fo.dataset.id = idx;
+
+            const wrapper = document.createElement('div');
+            wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+            wrapper.className = 'note';
+
+            const handle = document.createElement('div');
+            handle.className = 'handle';
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            const title = document.createElement('div');
+            title.className = 'title';
+            title.textContent = n.title || '제목 없음';
+            handle.appendChild(dot);
+            handle.appendChild(title);
+
+            const body = document.createElement('div');
+            body.className = 'body';
+            body.contentEditable = 'true';
+            body.innerText = n.text || '';
+
+            // 이미지가 있는 노트면 이미지 요소를 추가하고, 본문 편집은 보조로 유지
+            if (n.imageData) {
+              body.contentEditable = 'false';
+              const img = document.createElement('img');
+              img.src = n.imageData;
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.objectFit = 'contain';
+              img.style.display = 'block';
+              img.style.width = '100%';
+              img.style.height = '100%';
+              // 이미지 더블클릭 시 편집 모드 토글 (텍스트 주석 추가 가능)
+              img.addEventListener('dblclick', () => {
+                body.innerText = n.text || '';
+                body.contentEditable = 'true';
+                body.focus();
+              });
+              body.innerHTML = '';
+              body.appendChild(img);
+            }
+
+            const foot = document.createElement('div');
+            foot.className = 'footer';
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = ymd(daysToDate(n.day));
+            const delBtn = document.createElement('button');
+            delBtn.textContent = '삭제';
+            foot.appendChild(dateSpan);
+            foot.appendChild(delBtn);
+
+            wrapper.appendChild(handle);
+            wrapper.appendChild(body);
+            wrapper.appendChild(foot);
+            fo.appendChild(wrapper);
+            gNotes.appendChild(fo);
+
+            // 편집 저장
+            body.addEventListener('input', () => {
+              n.text = body.innerText;
+              save();
+            });
+
+            // 삭제
+            delBtn.addEventListener('click', () => {
+              notes.splice(idx, 1);
+              save();
+              render();
+            });
+
+            // 노트 드래그
+            let nd = false,
+              start = { x: 0, y: 0 },
+              startN = { x: 0, y: 0 };
+            handle.addEventListener('mousedown', (e) => {
+              e.stopPropagation();
+              nd = true;
+              handle.style.cursor = 'grabbing';
+              start.x = e.clientX;
+              start.y = e.clientY;
+              startN.x = n.x;
+              startN.y = n.y;
+              document.body.classList.add('noselect');
+            });
+            window.addEventListener('mousemove', (e) => {
+              if (!nd) return;
+              const dx = (e.clientX - start.x) / state.scale;
+              const dy = (e.clientY - start.y) / state.scale;
+              n.x = startN.x + dx;
+              n.y = startN.y + dy;
+              fo.setAttribute('x', n.x);
+              fo.setAttribute('y', n.y);
+              renderLinks(); // 연결선 갱신
+            });
+            window.addEventListener('mouseup', () => {
+              if (!nd) return;
+              nd = false;
+              handle.style.cursor = 'grab';
+              save();
+              document.body.classList.remove('noselect');
+            });
+          });
+        }
+
+        function render() {
+          renderTimeline();
+          renderLinks();
+          renderNotes();
+        }
+
+        // ====== 노트 생성 (배경 더블클릭) ======
+        svg.addEventListener('dblclick', (e) => {
+          if (e.target.closest('foreignObject')) return;
+          const w = screenToWorld(e.clientX, e.clientY);
+          const d = Math.round(w.x / DAY_PX);
+          const newNote = {
+            x: w.x - 110,
+            y: w.y - 80,
+            w: 220,
+            h: 160,
+            day: d,
+            title: '새 노트',
+            text: '',
+          };
+          notes.push(newNote);
+          save();
+          render();
+        });
+
+        // ====== 컨트롤 ======
+        document
+          .getElementById('btnToday')
+          .addEventListener('click', centerToday);
+
+        document.getElementById('btnJump').addEventListener('click', () => {
+          const inp = document.getElementById('jumpDate');
+          if (!inp.value) return;
+          const dt = new Date(inp.value + 'T00:00:00');
+          const d = dateToDays(dt);
+          const rect = svg.getBoundingClientRect();
+          // 현재 스케일 유지, x만 이동
+          state.tx = rect.width / 2 - d * DAY_PX * state.scale;
+          applyTransform();
+        });
+
+        // 내보내기
+        document.getElementById('btnExport').addEventListener('click', () => {
+          const blob = new Blob(
+            [JSON.stringify({ version: 1, notes }, null, 2)],
+            { type: 'application/json' }
+          );
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `timeline-notes-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+
+        // 가져오기
+        const fileImport = document.getElementById('fileImport');
+        document
+          .getElementById('btnImport')
+          .addEventListener('click', () => fileImport.click());
+        fileImport.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const text = await file.text();
+          try {
+            const data = JSON.parse(text);
+            if (Array.isArray(data.notes)) {
+              notes = data.notes;
+              save();
+              render();
+            } else if (Array.isArray(data)) {
+              notes = data;
+              save();
+              render();
+            } else alert('형식이 올바르지 않습니다.');
+          } catch (err) {
+            alert('가져오기 실패: ' + err.message);
+          }
+          fileImport.value = '';
+        });
+
+        // ====== 시작 ======
+        centerToday(); // 위치 초기화
+        // 저장된 노트가 있으면 렌더
+        render();
+
+        // 반응형 리렌더
+        window.addEventListener('resize', () => render());
+
+        // ====== 뷰포트 중앙 좌표 계산 ======
+        function getViewportWorldCenter() {
+          const rect = svg.getBoundingClientRect();
+          const wx = (rect.width / 2 - state.tx) / state.scale;
+          const wy = (rect.height / 2 - state.ty) / state.scale;
+          return { x: wx, y: wy };
+        }
+
+        // ====== 이미지 노트 생성 ======
+        function createImageNoteAtCenter(dataUrl) {
+          const c = getViewportWorldCenter();
+          const d = Math.round(c.x / DAY_PX);
+          const w = 220,
+            h = 160;
+          const newNote = {
+            x: c.x - w / 2,
+            y: c.y - h / 2,
+            w,
+            h,
+            day: d,
+            title: '이미지',
+            text: '',
+            imageData: dataUrl,
+          };
+          notes.push(newNote);
+          save();
+          render();
+        }
+
+        async function pasteImageFromClipboardAtCenter() {
+          if (!navigator.clipboard || !navigator.clipboard.read) {
+            throw new Error('클립보드 이미지 읽기를 지원하지 않습니다.');
+          }
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            for (const type of item.types) {
+              if (type.startsWith('image/')) {
+                const blob = await item.getType(type);
+                const dataUrl = await new Promise((res, rej) => {
+                  const r = new FileReader();
+                  r.onload = () => res(r.result);
+                  r.onerror = rej;
+                  r.readAsDataURL(blob);
+                });
+                createImageNoteAtCenter(String(dataUrl));
+                return true;
+              }
+            }
+          }
+          return false;
+        }
+
+        // Ctrl+S: 클립보드 이미지가 있으면 붙여넣기, 없으면 저장만
+        window.addEventListener('keydown', async (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            try {
+              const pasted = await pasteImageFromClipboardAtCenter();
+              if (!pasted) save();
+            } catch (_) {
+              // 권한/지원 불가 시 기존 저장 동작
+              save();
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
