@@ -374,31 +374,11 @@ function App() {
         >
           <div
             xmlns="http://www.w3.org/1999/xhtml"
-            className="note"
-            style={{
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02))',
-              border: '1px solid #2a3240',
-              borderRadius: 14,
-              color: '#e6edf3',
-              boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
+            className="note bg-gradient-to-b from-white/3 to-white/2 border border-neutral-600 rounded-2xl text-neutral-200 shadow-2xl flex flex-col overflow-hidden"
+            style={{ boxShadow: '0 12px 28px rgba(0,0,0,0.35)' }}
           >
             <div
-              className="handle"
-              style={{
-                height: 34,
-                background: '#10151d',
-                borderBottom: '1px solid #223046',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '0 10px',
-                cursor: 'grab',
-              }}
+              className="handle h-8 bg-neutral-900 border-b border-neutral-700 flex items-center gap-2 px-2.5 cursor-grab"
               onMouseDown={(e) => {
                 e.stopPropagation();
                 const start = { x: e.clientX, y: e.clientY };
@@ -423,31 +403,13 @@ function App() {
                 window.addEventListener('mouseup', onUp);
               }}
             >
-              <div
-                className="dot"
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: '#7aa2ff',
-                }}
-              />
-              <div
-                className="title"
-                style={{ fontWeight: 600, fontSize: 13, opacity: 0.9 }}
-              >
+              <div className="dot w-2 h-2 rounded-full bg-blue-400" />
+              <div className="title font-semibold text-xs opacity-90">
                 {n.title || '제목 없음'}
               </div>
             </div>
             <div
-              className="body"
-              style={{
-                flex: 1,
-                padding: 10,
-                outline: 'none',
-                fontSize: 14,
-                lineHeight: 1.35,
-              }}
+              className="body flex-1 p-2.5 outline-none text-sm leading-tight"
               contentEditable={!n.imageData}
               onInput={(e) => {
                 const text = e.currentTarget.innerText;
@@ -464,14 +426,7 @@ function App() {
               ) : (
                 <img
                   src={n.imageData}
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                    display: 'block',
-                    width: '100%',
-                    height: '100%',
-                  }}
+                  className="max-w-full max-h-full object-contain block w-full h-full"
                   onDoubleClick={(e) => {
                     const el = e.currentTarget.parentElement;
                     if (el) {
@@ -482,29 +437,10 @@ function App() {
                 />
               )}
             </div>
-            <div
-              className="footer"
-              style={{
-                height: 30,
-                borderTop: '1px solid #223046',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 10px',
-                fontSize: 12,
-                opacity: 0.8,
-              }}
-            >
+            <div className="footer h-7 border-t border-neutral-700 flex items-center justify-between px-2.5 text-xs opacity-80">
               <span>{ymd(daysToDate(n.day))}</span>
               <button
-                style={{
-                  background: '#121923',
-                  border: '1px solid #283348',
-                  color: '#cfd7e3',
-                  borderRadius: 8,
-                  padding: '4px 8px',
-                  cursor: 'pointer',
-                }}
+                className="bg-neutral-800 border border-neutral-600 text-neutral-300 rounded-lg px-2 py-1 cursor-pointer hover:border-neutral-500"
                 onClick={() =>
                   setNotes((prev) => prev.filter((_, i) => i !== idx))
                 }
@@ -530,88 +466,34 @@ function App() {
   }, []);
 
   return (
-    <div
-      className="w-screen h-screen"
-      style={{ background: '#0b0d10', color: '#cdd6df' }}
-    >
-      <div
-        style={{
-          position: 'fixed',
-          left: 16,
-          top: 16,
-          zIndex: 10,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid #202734',
-          borderRadius: 12,
-          padding: 12,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            marginBottom: 8,
-          }}
-        >
-          <span
-            style={{
-              padding: '4px 8px',
-              border: '1px solid #2b3342',
-              borderRadius: 999,
-              fontSize: 12,
-              opacity: 0.9,
-            }}
-          >
+    <div className="w-screen h-screen bg-neutral-900 text-neutral-300">
+      <div className="fixed left-4 top-4 z-10 bg-white/5 border border-neutral-700 rounded-xl p-3">
+        <div className="flex gap-2 items-center flex-wrap mb-2">
+          <span className="px-2 py-1 border border-neutral-600 rounded-full text-xs opacity-90">
             무한 타임라인
           </span>
           <button
             onClick={centerToday}
-            style={{
-              background: '#1d2430',
-              border: '1px solid #2b3342',
-              borderRadius: 9,
-              padding: '8px 10px',
-              cursor: 'pointer',
-            }}
+            className="bg-neutral-800 border border-neutral-600 rounded-lg px-2.5 py-2 cursor-pointer hover:border-neutral-500"
           >
             오늘로
           </button>
-          <label>
+          <label className="text-sm">
             날짜로 점프:{' '}
             <input
               type="date"
               id="jumpDate"
-              style={{
-                background: '#0e131a',
-                border: '1px solid #2b3342',
-                borderRadius: 9,
-                padding: '8px 10px',
-              }}
+              className="bg-neutral-900 border border-neutral-600 rounded-lg px-2.5 py-2 ml-1"
             />
           </label>
           <button
             onClick={onJump}
-            style={{
-              background: '#1d2430',
-              border: '1px solid #2b3342',
-              borderRadius: 9,
-              padding: '8px 10px',
-              cursor: 'pointer',
-            }}
+            className="bg-neutral-800 border border-neutral-600 rounded-lg px-2.5 py-2 cursor-pointer hover:border-neutral-500"
           >
             이동
           </button>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="flex gap-2 items-center flex-wrap">
           <button
             onClick={() => {
               const blob = new Blob(
@@ -625,25 +507,13 @@ function App() {
               a.click();
               URL.revokeObjectURL(url);
             }}
-            style={{
-              background: '#1d2430',
-              border: '1px solid #2b3342',
-              borderRadius: 9,
-              padding: '8px 10px',
-              cursor: 'pointer',
-            }}
+            className="bg-neutral-800 border border-neutral-600 rounded-lg px-2.5 py-2 cursor-pointer hover:border-neutral-500"
           >
             내보내기(JSON)
           </button>
           <button
             onClick={() => document.getElementById('fileImport').click()}
-            style={{
-              background: '#1d2430',
-              border: '1px solid #2b3342',
-              borderRadius: 9,
-              padding: '8px 10px',
-              cursor: 'pointer',
-            }}
+            className="bg-neutral-800 border border-neutral-600 rounded-lg px-2.5 py-2 cursor-pointer hover:border-neutral-500"
           >
             가져오기
           </button>
@@ -651,7 +521,7 @@ function App() {
             id="fileImport"
             type="file"
             accept="application/json"
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={async (e) => {
               const file = e.target.files && e.target.files[0];
               if (!file) return;
@@ -667,7 +537,7 @@ function App() {
               e.target.value = '';
             }}
           />
-          <span style={{ opacity: 0.7 }}>
+          <span className="opacity-70 text-sm">
             • 더블클릭: 노트 추가 • 드래그: 이동 • 스크롤: 줌
           </span>
         </div>
@@ -676,12 +546,8 @@ function App() {
       <svg
         ref={svgRef}
         onDoubleClick={onDblClick}
+        className="absolute inset-0 w-full h-full block"
         style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          display: 'block',
           background:
             'linear-gradient(180deg, transparent 49.5%, rgba(122,162,255,0.06) 49.5%, rgba(122,162,255,0.06) 50.5%, transparent 50.5%)',
         }}
