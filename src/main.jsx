@@ -13,6 +13,22 @@ const DAY_PX = 120;
 const EPOCH = new Date('2025-01-01T00:00:00Z');
 const STORE_KEY = 'infiniteTimeline.notes.v1';
 
+// 스티커 데이터
+const STICKERS = [
+  { id: 'star', emoji: '⭐', name: '별' },
+  { id: 'heart', emoji: '❤️', name: '하트' },
+  { id: 'fire', emoji: '🔥', name: '불' },
+  { id: 'thumbsup', emoji: '👍', name: '좋아요' },
+  { id: 'check', emoji: '✅', name: '체크' },
+  { id: 'warning', emoji: '⚠️', name: '경고' },
+  { id: 'lightbulb', emoji: '💡', name: '아이디어' },
+  { id: 'rocket', emoji: '🚀', name: '로켓' },
+  { id: 'trophy', emoji: '🏆', name: '트로피' },
+  { id: 'crown', emoji: '👑', name: '왕관' },
+  { id: 'diamond', emoji: '💎', name: '다이아몬드' },
+  { id: 'rainbow', emoji: '🌈', name: '무지개' },
+];
+
 function dateToDays(d) {
   return Math.floor((d - EPOCH) / DAY_MS);
 }
@@ -39,6 +55,8 @@ function App() {
   const viewRef = useRef(null);
   const [transform, setTransform] = useState({ scale: 1, tx: 0, ty: 0 });
   const [notes, setNotes] = useState(() => loadNotes());
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
 
   useEffect(() => {
     saveNotes(notes);
@@ -161,6 +179,7 @@ function App() {
       day,
       title: '새 노트',
       text: '',
+      sticker: null,
       ...extra,
     };
     setNotes((prev) => [...prev, newNote]);
@@ -404,9 +423,18 @@ function App() {
               }}
             >
               <div className="dot w-2 h-2 rounded-full bg-blue-400" />
-              <div className="title font-semibold text-xs opacity-90">
+              <div className="title font-semibold text-xs opacity-90 flex-1">
                 {n.title || '제목 없음'}
               </div>
+              <button
+                className="w-5 h-5 flex items-center justify-center text-xs hover:bg-neutral-700 rounded"
+                onClick={() => openStickerPicker(idx)}
+                title="스티커 추가"
+              >
+                {n.sticker
+                  ? STICKERS.find((s) => s.id === n.sticker)?.emoji
+                  : '🎨'}
+              </button>
             </div>
             <div
               className="body flex-1 p-2.5 outline-none text-sm leading-tight"
@@ -464,6 +492,43 @@ function App() {
     const rect = svg.getBoundingClientRect();
     setTransform((t) => ({ ...t, tx: rect.width / 2 - d * DAY_PX * t.scale }));
   }, []);
+
+  // 스티커 관련 함수들
+  const openStickerPicker = useCallback((noteId) => {
+    setSelectedNoteId(noteId);
+    setShowStickerPicker(true);
+  }, []);
+
+  const closeStickerPicker = useCallback(() => {
+    setShowStickerPicker(false);
+    setSelectedNoteId(null);
+  }, []);
+
+  const addStickerToNote = useCallback(
+    (stickerId) => {
+      if (selectedNoteId === null) return;
+      setNotes((prev) =>
+        prev.map((note) =>
+          note === notes[selectedNoteId]
+            ? { ...note, sticker: stickerId }
+            : note
+        )
+      );
+      closeStickerPicker();
+    },
+    [selectedNoteId, notes, closeStickerPicker]
+  );
+
+  const removeStickerFromNote = useCallback(
+    (noteId) => {
+      setNotes((prev) =>
+        prev.map((note) =>
+          note === notes[noteId] ? { ...note, sticker: null } : note
+        )
+      );
+    },
+    [notes]
+  );
 
   return (
     <div className="w-screen h-screen bg-neutral-900 text-neutral-300">
@@ -570,6 +635,62 @@ function App() {
           <g>{noteElements}</g>
         </g>
       </svg>
+
+      {/* 스티커 선택 UI */}
+      {showStickerPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={closeStickerPicker}
+        >
+          <div
+            className="bg-neutral-800 border border-neutral-600 rounded-xl p-4 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-neutral-200">
+                스티커 선택
+              </h3>
+              <button
+                onClick={closeStickerPicker}
+                className="text-neutral-400 hover:text-neutral-200 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {STICKERS.map((sticker) => (
+                <button
+                  key={sticker.id}
+                  className="w-12 h-12 flex items-center justify-center text-2xl hover:bg-neutral-700 rounded-lg border border-neutral-600 hover:border-neutral-500"
+                  onClick={() => addStickerToNote(sticker.id)}
+                  title={sticker.name}
+                >
+                  {sticker.emoji}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (selectedNoteId !== null) {
+                    removeStickerFromNote(selectedNoteId);
+                    closeStickerPicker();
+                  }
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg"
+              >
+                스티커 제거
+              </button>
+              <button
+                onClick={closeStickerPicker}
+                className="flex-1 bg-neutral-600 hover:bg-neutral-700 text-white py-2 px-4 rounded-lg"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
