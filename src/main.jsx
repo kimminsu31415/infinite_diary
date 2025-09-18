@@ -7,6 +7,7 @@ const DAY_MS = 24 * 60 * 60 * 1000; // 날짜 ↔ dayIndex 변환할 때 “며�
 const DAY_PX = 120;
 const EPOCH = new Date(Date.UTC(2025, 0, 1));
 
+// ===== 날짜, 좌표 표현 기능
 function dateToDays(date) {
   // 2025-01-05 → EPOCH=2025-01-01 기준 → (4일 차) → dayIndex=4
   // 날짜가 기준일(EPOCH)로부터 며칠 떨어져 있는지 구하는 함수
@@ -30,9 +31,18 @@ function ymdUTC(date) {
   return `${y}-${m}-${d}`;
 }
 
-function App() {
-  return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
+// ===== 좌표 변환 기능
+function screenToWorld(sx, sy, { scale, tx, ty }) {
+  return { x: (sx - tx) / scale, y: (sy - ty) / scale };
 }
+
+function worldToScreen(wx, wy, { scale, tx, ty }) {
+  return { x: wx * scale + tx, y: wy * scale + ty };
+}
+
+const clamp = function App() {
+  return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
+};
 
 const root = createRoot(document.getElementById('root'));
 root.render(<App />);
