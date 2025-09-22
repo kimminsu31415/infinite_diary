@@ -40,9 +40,19 @@ function worldToScreen(wx, wy, { scale, tx, ty }) {
   return { x: wx * scale + tx, y: wy * scale + ty };
 }
 
-const clamp = function App() {
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+function zoomAtPoint(sx, sy, nextScale, state) {
+  const { x: wx, y: wy } = screenToWorld(sx, sy, state);
+  return {
+    scale: nextScale,
+    tx: sx - wx * nextScale,
+    ty: sy - wy * nextScale,
+  };
+}
+
+function App() {
   return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
-};
+}
 
 const root = createRoot(document.getElementById('root'));
 root.render(<App />);
