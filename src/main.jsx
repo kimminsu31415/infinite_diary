@@ -51,6 +51,21 @@ function zoomAtPoint(sx, sy, nextScale, state) {
 }
 
 function App() {
+  const svgRef = useRef(null);
+  const viewRef = useRef(null);
+  const timelineRef = useRef(null);
+
+  const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
+
+  //화면에 변환 적용
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.setAttribute(
+      'transform',
+      `translate(${view.tx},${view.ty}) scale(${view.scale})`
+    );
+  }, [view]);
+
   return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
 }
 
