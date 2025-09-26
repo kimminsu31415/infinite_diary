@@ -66,6 +66,14 @@ function App() {
     );
   }, [view]);
 
+  function handleWheel(e) {
+    e.preventDefault();
+    const { sx, sy } = screenToWorld(e.clientX, e.clientY, view);
+    setView(zoomAtPoint(e.clientX, e.clientY, view.scale * 1.1, view));
+  }
+
+
+
   return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
 }
 
