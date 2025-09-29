@@ -79,6 +79,19 @@ function App() {
     setView({ ...view, tx: view.tx + e.deltaX, ty: view.ty + e.deltaY });
   }
 
+  //초기 위치: 화면 중앙 y=0 보이게
+  function centerToday() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = dateToDays(today);
+    const rect = svgRef.current.getBoundingClientRect();
+  }
+  //줌
+  function handleZoom(e) {
+    e.preventDefault();
+    setView(zoomAtPoint(e.clientX, e.clientY, view.scale * 1.1, view));
+  }
+
   return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
 }
 
