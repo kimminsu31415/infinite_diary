@@ -92,6 +92,19 @@ function App() {
     setView(zoomAtPoint(e.clientX, e.clientY, view.scale * 1.1, view));
   }
 
+  //내보내기
+  function handleExport() {
+    const blob = new Blob([JSON.stringify({ version: 1, notes }, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `timeline-notes-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
 }
 
