@@ -105,6 +105,16 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
+  //가져오기
+  function handleImport(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = JSON.parse(e.target.result);
+    };
+    reader.readAsText(file);
+  }
+
   return <div className="w-screen h-screen bg-gray-300">infinite diary</div>;
 }
 
